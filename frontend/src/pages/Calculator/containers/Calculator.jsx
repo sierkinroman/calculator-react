@@ -1,8 +1,11 @@
 import React from 'react';
-import History from './components/History'
-import Expression from './components/Expression'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import examplesActions from '../actions/actions';
+import History from '../components/History'
+import Expression from '../components/Expression'
+import ButtonItem from '../components/ButtonItem';
 import { Button, Container, Grid, Paper, withStyles } from '@material-ui/core';
-import ButtonItem from './components/ButtonItem';
 
 const styles = () => ({
   calcWrapper: {
@@ -39,11 +42,13 @@ class Calculator extends React.Component {
       ],
     };
   }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-
+  componentDidUpdate(prevProps, prevState) {
+    if (JSON.stringify(prevProps.examples) !== JSON.stringify(this.props.examples)) {
+      this.props.examples.forEach(example =>
+        this.calculateExpression('', example)
+      );
+    }
   }
-
   handleClick(value) {
     switch (value) {
       case '1':
@@ -123,13 +128,14 @@ class Calculator extends React.Component {
     }
   }
 
-  calculateExpression(mathOperator = '') {
+  calculateExpression(addedMathOperator = '', expression = this.state.expression) {
+    console.log(expression)
     // (-?\d+|(-?\d+\.\d+)) - integer or decimal number (optional negative)
     // ([+-/*]) - math operator: +, -, / or *
     // (\d+|(\d+\.\d+)) - integer or decimal number
     const fullExpressionRegexp = /^(-?\d+|(-?\d+\.\d+))([+-/*])(\d+|(\d+\.\d+))$/;
 
-    const expressionMatcher = this.state.expression.match(fullExpressionRegexp);
+    const expressionMatcher = expression.match(fullExpressionRegexp);
     if (expressionMatcher) {
       const leftOperand = parseFloat(expressionMatcher[1]);
       const rightOperand = parseFloat(expressionMatcher[4]);
@@ -143,19 +149,19 @@ class Calculator extends React.Component {
       switch (expressionOperator) {
         case '+':
           result = leftOperand + rightOperand;
-          newExpression = result.toString() + mathOperator;
+          newExpression = result.toString() + addedMathOperator;
           historyItem = leftOperand + '+' + rightOperand + '=' + result;
           this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
           break;
         case '-':
           result = leftOperand - rightOperand;
-          newExpression = result.toString() + mathOperator;
+          newExpression = result.toString() + addedMathOperator;
           historyItem = leftOperand + '-' + rightOperand + '=' + result;
           this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
           break;
         case '*':
           result = leftOperand * rightOperand;
-          newExpression = result.toString() + mathOperator;
+          newExpression = result.toString() + addedMathOperator;
           historyItem = leftOperand + '*' + rightOperand + '=' + result;
           this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
           break;
@@ -166,7 +172,7 @@ class Calculator extends React.Component {
             isCalcError = true;
           } else {
             result = leftOperand / rightOperand;
-            newExpression = result.toString() + mathOperator;
+            newExpression = result.toString() + addedMathOperator;
           }
           historyItem = leftOperand + '/' + rightOperand + '=' + result;
           this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
@@ -176,14 +182,14 @@ class Calculator extends React.Component {
   }
 
   updateStateAfterCalc(newExpression, isCalcError, historyItem) {
-    this.setState({
+    this.setState(prevState => ({
       expression: newExpression,
       isCalcError: isCalcError,
       history: [
         historyItem,
-        ...this.state.history
+        ...prevState.history,
       ],
-    });
+    }));
   }
 
   render() {
@@ -218,6 +224,7 @@ class Calculator extends React.Component {
           </Grid>
 
           <Button
+            onClick={() => this.props.actionFetchExamples({examplesCount: 5})}
             variant='contained'
             size='large'
             fullWidth={true}
@@ -232,4 +239,18 @@ class Calculator extends React.Component {
 
 }
 
-export default withStyles(styles)(Calculator);
+const mapReduxStateToProps = reduxState => ({
+  examples: reduxState.examples,
+});
+
+const mapDispatchToProps = (dispatch) => {
+  const {
+    fetchExamples,
+  } = bindActionCreators(examplesActions, dispatch);
+
+  return ({
+    actionFetchExamples: fetchExamples,
+  });
+};
+
+export default connect(mapReduxStateToProps, mapDispatchToProps)(withStyles(styles)(Calculator));
