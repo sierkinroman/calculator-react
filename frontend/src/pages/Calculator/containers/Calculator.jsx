@@ -42,6 +42,7 @@ class Calculator extends React.Component {
       ],
     };
   }
+
   componentDidUpdate(prevProps, prevState) {
     if (JSON.stringify(prevProps.examples) !== JSON.stringify(this.props.examples)) {
       this.props.examples.forEach(example =>
@@ -49,6 +50,7 @@ class Calculator extends React.Component {
       );
     }
   }
+
   handleClick(value) {
     switch (value) {
       case '1':
@@ -129,7 +131,6 @@ class Calculator extends React.Component {
   }
 
   calculateExpression(addedMathOperator = '', expression = this.state.expression) {
-    console.log(expression)
     // (-?\d+|(-?\d+\.\d+)) - integer or decimal number (optional negative)
     // ([+-/*]) - math operator: +, -, / or *
     // (\d+|(\d+\.\d+)) - integer or decimal number
