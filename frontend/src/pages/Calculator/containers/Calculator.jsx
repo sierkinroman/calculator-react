@@ -57,7 +57,7 @@ class Calculator extends React.Component {
             expressionOperator,
             rightOperand,
             result,
-            isCalcError = false,
+            isCalcError,
           } = resultCalculation;
 
           lastResult = result;
@@ -177,60 +177,44 @@ class Calculator extends React.Component {
       const rightOperand = parseFloat(expressionMatcher[4]);
       const expressionOperator = expressionMatcher[3];
 
-      let result;
+      let result = '';
+      let isCalcError = false;
 
       switch (expressionOperator) {
         case '+':
           result = leftOperand + rightOperand;
-          return {
-            result,
-            leftOperand,
-            expressionOperator,
-            rightOperand,
-            addedMathOperator,
-          };
+          break;
         case '-':
           result = leftOperand - rightOperand;
-          return {
-            result,
-            leftOperand,
-            expressionOperator,
-            rightOperand,
-            addedMathOperator,
-          };
+          break;
         case '*':
           result = leftOperand * rightOperand;
-          return {
-            result,
-            leftOperand,
-            expressionOperator,
-            rightOperand,
-            addedMathOperator,
-          };
+          break;
         case '/':
-          let isCalcError = false;
           if (rightOperand === 0) {
             result = 'Error division by zero';
             isCalcError = true;
           } else {
             result = leftOperand / rightOperand;
           }
-          return {
-            result,
-            isCalcError,
-            leftOperand,
-            expressionOperator,
-            rightOperand,
-            addedMathOperator,
-          };
+          break;
       }
+
+      return {
+        result,
+        isCalcError,
+        leftOperand,
+        expressionOperator,
+        rightOperand,
+        addedMathOperator,
+      };
     }
   }
 
   updateStateAfterCalc(resultCalculation) {
     const {
       result,
-      isCalcError = false,
+      isCalcError,
       leftOperand,
       expressionOperator,
       rightOperand,
