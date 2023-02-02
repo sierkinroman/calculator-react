@@ -45,9 +45,38 @@ class Calculator extends React.Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (JSON.stringify(prevProps.examples) !== JSON.stringify(this.props.examples)) {
-      this.props.examples.forEach(example =>
-        this.calculateExpression('', example)
-      );
+      let lastResult = '';
+      let lastIsCalcError = false;
+      let historyBE = [];
+
+      this.props.examples.forEach(example => {
+        const resultCalculation = this.calculateExpression('', example);
+        if (resultCalculation) {
+          const {
+            leftOperand,
+            expressionOperator,
+            rightOperand,
+            result,
+            isCalcError = false,
+          } = resultCalculation;
+
+          lastResult = result;
+          lastIsCalcError = isCalcError;
+          historyBE = [
+            leftOperand + expressionOperator + rightOperand + '=' + result,
+            ...historyBE
+          ];
+        }
+      });
+
+      this.setState({
+        expression: lastResult.toString(),
+        isCalcError: lastIsCalcError,
+        history: [
+          ...historyBE,
+          ...this.state.history,
+        ],
+      });
     }
   }
 
@@ -72,7 +101,10 @@ class Calculator extends React.Component {
         this.processMathOperator(value);
         break;
       case '=':
-        this.calculateExpression();
+        const result = this.calculateExpression();
+        if (result) {
+          this.updateStateAfterCalc(result);
+        }
         break;
       case 'C':
         this.setState({
@@ -89,11 +121,11 @@ class Calculator extends React.Component {
       this.setState({
         expression: value,
         isCalcError: false,
-      })
+      });
     } else {
-      this.setState(prevExpression => ({
-        expression: prevExpression.expression + value
-      }));
+      this.setState({
+        expression: this.state.expression + value,
+      });
     }
   }
 
@@ -115,7 +147,10 @@ class Calculator extends React.Component {
       return;
     }
 
-    this.calculateExpression(mathOperator);
+    const result = this.calculateExpression(mathOperator);
+    if (result) {
+      this.updateStateAfterCalc(result);
+    }
   }
 
   isMathOperator(value) {
@@ -143,54 +178,75 @@ class Calculator extends React.Component {
       const expressionOperator = expressionMatcher[3];
 
       let result;
-      let isCalcError = false;
-      let newExpression;
-      let historyItem;
 
       switch (expressionOperator) {
         case '+':
           result = leftOperand + rightOperand;
-          newExpression = result.toString() + addedMathOperator;
-          historyItem = leftOperand + '+' + rightOperand + '=' + result;
-          this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
-          break;
+          return {
+            result,
+            leftOperand,
+            expressionOperator,
+            rightOperand,
+            addedMathOperator,
+          };
         case '-':
           result = leftOperand - rightOperand;
-          newExpression = result.toString() + addedMathOperator;
-          historyItem = leftOperand + '-' + rightOperand + '=' + result;
-          this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
-          break;
+          return {
+            result,
+            leftOperand,
+            expressionOperator,
+            rightOperand,
+            addedMathOperator,
+          };
         case '*':
           result = leftOperand * rightOperand;
-          newExpression = result.toString() + addedMathOperator;
-          historyItem = leftOperand + '*' + rightOperand + '=' + result;
-          this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
-          break;
+          return {
+            result,
+            leftOperand,
+            expressionOperator,
+            rightOperand,
+            addedMathOperator,
+          };
         case '/':
+          let isCalcError = false;
           if (rightOperand === 0) {
             result = 'Error division by zero';
-            newExpression = result;
             isCalcError = true;
           } else {
             result = leftOperand / rightOperand;
-            newExpression = result.toString() + addedMathOperator;
           }
-          historyItem = leftOperand + '/' + rightOperand + '=' + result;
-          this.updateStateAfterCalc(newExpression, isCalcError, historyItem);
-          break;
+          return {
+            result,
+            isCalcError,
+            leftOperand,
+            expressionOperator,
+            rightOperand,
+            addedMathOperator,
+          };
       }
     }
   }
 
-  updateStateAfterCalc(newExpression, isCalcError, historyItem) {
-    this.setState(prevState => ({
-      expression: newExpression,
-      isCalcError: isCalcError,
+  updateStateAfterCalc(resultCalculation) {
+    const {
+      result,
+      isCalcError = false,
+      leftOperand,
+      expressionOperator,
+      rightOperand,
+      addedMathOperator,
+    } = resultCalculation;
+
+    this.setState({
+      expression: isCalcError
+        ? result
+        : result + addedMathOperator,
+      isCalcError,
       history: [
-        historyItem,
-        ...prevState.history,
+        leftOperand + expressionOperator + rightOperand + '=' + result,
+        ...this.state.history,
       ],
-    }));
+    });
   }
 
   render() {
@@ -225,13 +281,14 @@ class Calculator extends React.Component {
           </Grid>
 
           <Button
-            onClick={() => this.props.actionFetchExamples({examplesCount: 5})}
+            onClick={() => this.props.actionFetchExamples({ examplesCount: 5 })}
             variant='contained'
             size='large'
             fullWidth={true}
             className={classes.btnBackend}
           >
-            Get examples and solve
+            {this.props.isLoading && 'Loading...'}
+            {!this.props.isLoading && 'Get examples and solve'}
           </Button>
         </Paper>
       </Container>
@@ -242,6 +299,7 @@ class Calculator extends React.Component {
 
 const mapReduxStateToProps = reduxState => ({
   examples: reduxState.examples,
+  isLoading: reduxState.isLoading,
 });
 
 const mapDispatchToProps = (dispatch) => {
